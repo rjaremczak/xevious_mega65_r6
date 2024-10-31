@@ -19,10 +19,11 @@ entity main is
    );
    port (
       clk_main_i              : in  std_logic;
-      clk24_clk_i             : in  std_logic;
       reset_soft_i            : in  std_logic;
       reset_hard_i            : in  std_logic;
-      
+      pause_i                 : in  std_logic;
+      dim_video_o             : out std_logic;
+
       -- MiSTer core main clock speed:
       -- Make sure you pass very exact numbers here, because they are used for avoiding clock drift at derived clocks
       clk_main_speed_i        : in  natural;
@@ -69,7 +70,7 @@ entity main is
       dsw_b_i                 : in  std_logic_vector(7 downto 0);
 
       dn_clk_i                : in  std_logic;
-      dn_addr_i               : in  std_logic_vector(18 downto 0);
+      dn_addr_i               : in  std_logic_vector(16 downto 0);
       dn_data_i               : in  std_logic_vector(7 downto 0);
       dn_wr_i                 : in  std_logic;
 
@@ -81,30 +82,51 @@ end entity main;
 architecture synthesis of main is
 
 signal keyboard_n        : std_logic_vector(79 downto 0);
+signal pause_cpu         : std_logic;
 signal status            : signed(31 downto 0);
+signal flip_screen       : std_logic;
 signal flip              : std_logic := '0';
+signal video_rotated     : std_logic;
+signal rotate_ccw        : std_logic := flip_screen;
+signal direct_video      : std_logic;
 signal forced_scandoubler: std_logic;
 signal gamma_bus         : std_logic_vector(21 downto 0);
+signal audio             : std_logic_vector(15 downto 0);
 
 
 -- I/O board button press simulation ( active high )
 -- b[1]: user button
 -- b[0]: osd button
 
-signal reset             : std_logic  := reset_hard_i or reset_soft_i;
+signal buttons           : std_logic_vector(1 downto 0);
+signal reset             : std_logic;
+
 
 -- highscore system
-signal hs_address       : std_logic_vector(15 downto 0);
+signal hs_address       : std_logic_vector(10 downto 0);
 signal hs_data_in       : std_logic_vector(7 downto 0);
 signal hs_data_out      : std_logic_vector(7 downto 0);
 signal hs_write_enable  : std_logic;
 
+signal hs_pause         : std_logic;
 signal options          : std_logic_vector(1 downto 0);
 signal self_test        : std_logic;
 
-signal ce_6,ce_3,ce_1p5 : std_logic;
-signal inv_ena          : std_logic;
-signal div              : unsigned(2 downto 0);
+constant C_MENU_OSMPAUSE     : natural := 2;
+constant C_MENU_OSMDIM       : natural := 3;
+constant C_MENU_FLIP         : natural := 9;
+
+-- Bombtrigger
+constant C_MENU_BOMB_TRIG_EN  : natural := 85;
+constant C_MENU_BOMB_TRIG_0   : natural := 86;
+constant C_MENU_BOMB_TRIG_1   : natural := 87;
+constant C_MENU_BOMB_TRIG_2   : natural := 88;
+constant C_MENU_BOMB_TRIG_3   : natural := 89;
+constant C_MENU_BOMB_TRIG_4   : natural := 90;
+constant C_MENU_BOMB_TRIG_5   : natural := 91;
+constant C_MENU_BOMB_TRIG_6   : natural := 92;
+constant C_MENU_BOMB_TRIG_7   : natural := 93;
+constant C_MENU_BOMB_TRIG_8   : natural := 94;
 
 -- Game player inputs
 constant m65_1             : integer := 56; --Player 1 Start
@@ -117,165 +139,146 @@ constant m65_up_crsr       : integer := 73; --Player up
 constant m65_vert_crsr     : integer := 7;  --Player down
 constant m65_left_crsr     : integer := 74; --Player left
 constant m65_horz_crsr     : integer := 2;  --Player right
-constant m65_space         : integer := 60; --Jump
 constant m65_left_shift    : integer := 15; --Fire
+constant m65_right_shift   : integer := 52; --Fire 2
+constant m65_space         : integer := 60; --Bomb
+
 
 -- Pause, credit button & test mode
+constant m65_p             : integer := 41; --Pause button
+constant m65_s             : integer := 13; --Service 1
+constant m65_capslock      : integer := 72; --Service Mode
 constant m65_help          : integer := 67; --Help key
-constant m65_p             : integer := 41; 
-
--- Up + Fire = Jump
-constant C_UP_FIRE            : natural := 2;
 
 
-signal up_fire_jump : std_logic;
-signal p1_n_jump    : std_logic;
-signal p1_n_up      : std_logic;
-signal p1_n_fire    : std_logic;
-
-signal p2_n_jump    : std_logic;
-signal p2_n_up      : std_logic;
-signal p2_n_fire    : std_logic;
-
-signal m_pause,pause,old_pause  : std_logic;
-
--- MiSTer clocks
---.outclk_0(clk_vid),   48Mhz
---.outclk_1(clk_sys),   24Mhz
---.outclk_2(clk_12)     12Mhz
+signal p1_bomb_auto : std_logic;
+signal p2_bomb_auto : std_logic;
+signal trigger_sel  : std_logic_vector(3 downto 0);
 
 begin
    
-    audio_right_o <= audio_left_o;
-    m_pause <= keyboard_n(m65_p);
-    up_fire_jump <= osm_control_i(C_UP_FIRE);
+    reset <= reset_hard_i or reset_soft_i;
+    audio_left_o(15) <= not audio(15);
+    audio_left_o(14 downto 0) <= signed(audio(14 downto 0));
+    audio_right_o(15) <= not audio(15);
+    audio_right_o(14 downto 0) <= signed(audio(14 downto 0));
    
-
-    i_gng : entity work.jtgng_game
+    options(0) <= osm_control_i(C_MENU_OSMPAUSE);
+    options(1) <= osm_control_i(C_MENU_OSMDIM);
+    flip_screen <= osm_control_i(C_MENU_FLIP);
+    
+    
+    trigger_sel <="0000" when osm_control_i(C_MENU_BOMB_TRIG_0) = '1' else
+                  "0001" when osm_control_i(C_MENU_BOMB_TRIG_1) = '1' else
+                  "0010" when osm_control_i(C_MENU_BOMB_TRIG_2) = '1' else
+                  "0011" when osm_control_i(C_MENU_BOMB_TRIG_3) = '1' else
+                  "0100" when osm_control_i(C_MENU_BOMB_TRIG_4) = '1' else
+                  "0101" when osm_control_i(C_MENU_BOMB_TRIG_5) = '1' else
+                  "0110" when osm_control_i(C_MENU_BOMB_TRIG_6) = '1' else
+                  "0111" when osm_control_i(C_MENU_BOMB_TRIG_7) = '1' else
+                  "1000" when osm_control_i(C_MENU_BOMB_TRIG_8) = '1';
+                  
+    
+    -- for player 1 and player 2 ( cocktail / table mode )
+    i_bombtrigger : entity work.bombtrigger
     port map (
     
-        rst      => reset,
-        soft_rst => reset,
-        clk      => clk_main_i, -- 12Mhz main clock
-        cen12    => '1',
-        cen6     => ce_6,
-        cen3     => ce_3,
-        cen1p5   => ce_1p5,
+    clk_i           => clk_main_i, -- use the core's 18mhz clock
+    reset_i         => reset,
+    enable_n_i      => osm_control_i(C_MENU_BOMB_TRIG_EN),
+    -- player1                                        
+    fire1_n_i       => joy_1_fire_n_i,
+    bomb1_o         => p1_bomb_auto,
+    -- player2                                       
+    fire2_n_i       => joy_2_fire_n_i,
+    bomb2_o         => p2_bomb_auto,
+    trigger_sel_i   => trigger_sel
         
-        start_button(0) => keyboard_n(m65_1),
-        start_button(1) => keyboard_n(m65_2),
-        coin_input(0)   => keyboard_n(m65_5),
-        coin_input(1)   => keyboard_n(m65_6),
-        
-        red             => video_red_o,
-        green           => video_green_o,
-        blue            => video_blue_o,
-        LHBL            => video_hblank_o,
-        LVBL            => video_vblank_o,
-        HS              => video_hs_o,
-        VS              => video_vs_o,
-            
-        joystick1(0)    => joy_1_right_n_i and keyboard_n(m65_horz_crsr),
-        joystick1(1)    => joy_1_left_n_i and keyboard_n(m65_left_crsr),   
-        joystick1(2)    => joy_1_down_n_i and keyboard_n(m65_vert_crsr),
-        joystick1(3)    => p1_n_up,
-        joystick1(4)    => p1_n_fire,
-        joystick1(5)    => p1_n_jump,
-        
-        joystick2(0)    => joy_2_right_n_i and keyboard_n(m65_horz_crsr),
-        joystick2(1)    => joy_2_left_n_i and keyboard_n(m65_left_crsr),   
-        joystick2(2)    => joy_2_down_n_i and keyboard_n(m65_vert_crsr),
-        joystick2(3)    => p2_n_up,
-        joystick2(4)    => p2_n_fire,
-        joystick2(5)    => p2_n_jump,
-        
-        romload_clk     =>  dn_clk_i,   -- use clock for M2M rom loading.
-        romload_wr      =>  dn_wr_i,
-        romload_addr    =>  dn_addr_i,
-        romload_data    =>  dn_data_i,
-        
-        enable_char     => '1',
-        enable_scr      => '1',
-        enable_obj      => '1',
-        
-        dip_pause       => pause,
-        dip_inv         => not inv_ena or not dsw_a_i(0), -- FLIP SCREEN , not working.
-        dip_lives(0)    => not dsw_b_i(6),
-        dip_lives(1)    => not dsw_b_i(7),
-        dip_level(0)    => not dsw_b_i(1),
-        dip_level(1)    => not dsw_b_i(2),
-        dip_bonus(0)    => not dsw_b_i(3),
-        dip_bonus(1)    => not dsw_b_i(4),
-        dip_game_mode   => not dsw_a_i(1),  -- 1 = Game, 0 = Service mode
-        dip_upright     => not dsw_b_i(5),  -- 1 = cocktail, 0 - upright
-        dip_attract_snd => not dsw_a_i(2),  -- ATTRACT SOUND - ( 0 = SOUND )
-        
-        enable_psg      => '1',
-        enable_fm       => '1',
-        ym_snd          => audio_left_o
-	   
-     );
+    );
+    
+
+    i_xevious : entity work.xevious
+    port map (
+    
+    clock_18   => clk_main_i,
+    reset      => reset,
+    
+    video_r    => video_red_o,
+    video_g    => video_green_o,
+    video_b    => video_blue_o,
+    
+    --video_csync => open,
+    video_hs    => video_hs_o,
+    video_vs    => video_vs_o,
+    blank_h     => video_hblank_o,
+    blank_v     => video_vblank_o,
+    
+    audio       => audio,
+    
+    self_test  => not keyboard_n(m65_capslock),
+    service    => not keyboard_n(m65_s),
+    coin1      => not keyboard_n(m65_5),
+    coin2      => not keyboard_n(m65_6),
+    start1     => not keyboard_n(m65_1),
+    start2     => not keyboard_n(m65_2),
+    up1        => not joy_1_up_n_i, --or not keyboard_n(m65_up_crsr),
+    down1      => not joy_1_down_n_i, --or not keyboard_n(m65_vert_crsr),
+    left1      => not joy_1_left_n_i, --or not keyboard_n(m65_left_crsr),
+    right1     => not joy_1_right_n_i, --or not keyboard_n(m65_horz_crsr),
+    fire1      => not joy_1_fire_n_i, --or not keyboard_n(m65_right_shift),
+    fire2      => not joy_2_fire_n_i, --or not keyboard_n(m65_space),
+    up2        => not joy_2_up_n_i,
+    down2      => not joy_2_down_n_i,
+    left2      => not joy_2_left_n_i,
+    right2     => not joy_2_right_n_i,
+    flip       => flip_screen,
+    
+    -- dip a and b are labelled back to front in MiSTer core, hence this workaround.
+    dip_switch_a    => not dsw_b_i,
+    dip_switch_b    => not (dsw_a_i(7 downto 5) & (not keyboard_n(m65_space) or not p2_bomb_auto) & dsw_a_i(3 downto 1) & (not keyboard_n(m65_space) or not p1_bomb_auto)),
+    
+    h_offset   => status(27 downto 24),
+    v_offset   => status(31 downto 28),
+    pause      => pause_cpu or pause_i,
+   
+    hs_address => hs_address,
+    hs_data_out=> hs_data_out,
+    hs_data_in => hs_data_in,
+    hs_write   => hs_write_enable,
+    
+    -- @TODO: ROM loading. For now we will hardcode the ROMs
+    -- No dynamic ROM loading as of yet
+    dn_clk     => dn_clk_i,
+    dn_addr    => dn_addr_i,
+    dn_data    => dn_data_i,
+    dn_wr      => dn_wr_i
+ );
+ 
+    i_pause : entity work.pause
+     generic map (
      
-    -- generate clocks for main cpu, z80 and YM sound chip.
-    process(clk_main_i)
-    begin
-        if rising_edge(clk_main_i) then
-            div <= div + 1;
-            ce_6 <= not div(0);                                         -- 6809 main cpu
-            ce_3 <= (not div(1)) and (not div(0));                      -- Z80 sound cpu
-            ce_1p5 <= (not div(2)) and (not div(1)) and (not div(0));   -- YM2203 x 2
-        end if;
-    end process;
-    
-    -- invert screen ( not working )
-    process(clk24_clk_i)
-    variable flg : std_logic_vector(3 downto 0);
-    begin
-        if rising_edge(clk24_clk_i) then
-            if dn_wr_i = '1' then
-                 flg(0) := '1' when (dn_addr_i(1 downto 0) = "00" and dn_data_i = "00010000") else '0';
-                 flg(1) := '1' when (dn_addr_i(1 downto 0) = "01" and dn_data_i = "10000011") else '0';
-                 flg(2) := '1' when (dn_addr_i(1 downto 0) = "10" and dn_data_i = "00000000") else '0';
-                 flg(3) := '1' when (dn_addr_i(1 downto 0) = "11" and dn_data_i = "10000000") else '0';
-            end if;
-            inv_ena <= flg(0) and flg(1) and flg(2) and flg(3);
-        end if;
-    end process;
-    
-    -- alternate controls.
-    process(clk_main_i)
-    begin
-       if rising_edge(clk_main_i) then
-            if up_fire_jump then -- p1 up + fire = jump enable.
-                p1_n_jump <= '0'  when (joy_1_fire_n_i = '0' and joy_1_up_n_i = '0')  else '1';
-                p1_n_fire <= '0'  when (joy_1_fire_n_i = '0' and joy_1_up_n_i = '1') else '1';
-                p1_n_up   <= '0'  when (joy_1_up_n_i = '0' and joy_1_fire_n_i = '1')  else '1';
-                
-                p2_n_jump <= '0'  when (joy_2_fire_n_i = '0' and joy_2_up_n_i = '0')  else '1';
-                p2_n_fire <= '0'  when (joy_2_fire_n_i = '0' and joy_2_up_n_i = '1') else '1';
-                p2_n_up   <= '0'  when (joy_2_up_n_i = '0' and joy_2_fire_n_i = '1')  else '1';
-            else -- standard inputs
-                p1_n_fire <= joy_1_fire_n_i and keyboard_n(m65_left_shift);
-                p1_n_up <= joy_1_up_n_i and keyboard_n(m65_up_crsr);
-                p1_n_jump <= keyboard_n(m65_space);
-                
-                p2_n_fire <= joy_2_fire_n_i and keyboard_n(m65_left_shift);
-                p2_n_up <= joy_2_up_n_i and keyboard_n(m65_up_crsr);
-                p2_n_jump <= keyboard_n(m65_space);
-            end if;
-        end if;
-    end process;
-    
-    -- pause
-    process(clk24_clk_i)
-    begin
-        if rising_edge(clk24_clk_i) then
-            old_pause <= m_pause;
-            if (not old_pause and m_pause) then
-                pause <= not pause;
-            end if;
-        end if;
-    end process;
+        RW  => 3,
+        GW  => 3,
+        BW  => 2,
+        CLKSPD => 18
+        
+     )         
+     port map (
+     
+         clk_sys        => clk_main_i,
+         reset          => reset,
+         user_button    => keyboard_n(m65_p),
+         pause_request  => hs_pause,
+         options        => options,  -- not status(11 downto 10), - TODO, hookup to OSD.
+         OSD_STATUS     => '0',       -- disabled for now - TODO, to OSD
+         r              => video_red_o,
+         g              => video_green_o,
+         b              => video_blue_o,
+         pause_cpu      => pause_cpu,
+         dim_video      => dim_video_o
+         --rgb_out        TODO
+         
+      );
       
    -- @TODO: Keyboard mapping and keyboard behavior
    -- Each core is treating the keyboard in a different way: Some need low-active "matrices", some
@@ -294,4 +297,3 @@ begin
       ); -- i_keyboard
 
 end architecture synthesis;
-
