@@ -853,28 +853,28 @@ begin
          main_joy_1_left_n_i     => main_joy1_left_n_in,
          main_joy_1_right_n_i    => main_joy1_right_n_in,
          main_joy_1_fire_n_i     => main_joy1_fire_n_in,
-         main_joy_1_up_n_o       => main_joy1_up_n_out,
-         main_joy_1_down_n_o     => main_joy1_down_n_out,
-         main_joy_1_left_n_o     => main_joy1_left_n_out,
-         main_joy_1_right_n_o    => main_joy1_right_n_out,
-         main_joy_1_fire_n_o     => main_joy1_fire_n_out,
+--         main_joy_1_up_n_o       => main_joy1_up_n_out,
+--         main_joy_1_down_n_o     => main_joy1_down_n_out,
+--         main_joy_1_left_n_o     => main_joy1_left_n_out,
+--         main_joy_1_right_n_o    => main_joy1_right_n_out,
+--         main_joy_1_fire_n_o     => main_joy1_fire_n_out,
 
          main_joy_2_up_n_i       => main_joy2_up_n_in,
          main_joy_2_down_n_i     => main_joy2_down_n_in,
          main_joy_2_left_n_i     => main_joy2_left_n_in,
          main_joy_2_right_n_i    => main_joy2_right_n_in,
          main_joy_2_fire_n_i     => main_joy2_fire_n_in,
-         main_joy_2_up_n_o       => main_joy2_up_n_out,
-         main_joy_2_down_n_o     => main_joy2_down_n_out,
-         main_joy_2_left_n_o     => main_joy2_left_n_out,
-         main_joy_2_right_n_o    => main_joy2_right_n_out,
-         main_joy_2_fire_n_o     => main_joy2_fire_n_out,
+--         main_joy_2_up_n_o       => main_joy2_up_n_out,
+--         main_joy_2_down_n_o     => main_joy2_down_n_out,
+--         main_joy_2_left_n_o     => main_joy2_left_n_out,
+--         main_joy_2_right_n_o    => main_joy2_right_n_out,
+--         main_joy_2_fire_n_o     => main_joy2_fire_n_out,
 
          main_pot1_x_i           => main_pot1_x,
          main_pot1_y_i           => main_pot1_y,
          main_pot2_x_i           => main_pot2_x,
          main_pot2_y_i           => main_pot2_y,
-         main_rtc_i              => main_rtc,
+--         main_rtc_i              => main_rtc,
 
          --------------------------------------------------------------------------------------------------------
          -- Provide support for external memory (Avalon Memory Map)
@@ -892,76 +892,76 @@ begin
          hr_core_readdatavalid_i => hr_core_readdatavalid,
          hr_core_waitrequest_i   => hr_core_waitrequest,
          hr_high_i               => hr_high,
-         hr_low_i                => hr_low,
+         hr_low_i                => hr_low
 
          --------------------------------------------------------------------
          -- C64 specific ports that are not supported by the M2M framework
          --------------------------------------------------------------------
 
          -- CBM-488/IEC serial port
-         iec_reset_n_o           => iec_reset_n_o,
-         iec_atn_n_o             => iec_atn_n_o,
-         iec_clk_en_o            => iec_clk_en,
-         iec_clk_n_i             => iec_clk_n_i,
-         iec_clk_n_o             => iec_clk_n_o,
-         iec_data_en_o           => iec_data_en,
-         iec_data_n_i            => iec_data_n_i,
-         iec_data_n_o            => iec_data_n_o,
-         iec_srq_en_o            => iec_srq_en,
-         iec_srq_n_i             => iec_srq_n_i,
-         iec_srq_n_o             => iec_srq_n_o,
+--         iec_reset_n_o           => iec_reset_n_o,
+--         iec_atn_n_o             => iec_atn_n_o,
+--         iec_clk_en_o            => iec_clk_en,
+--         iec_clk_n_i             => iec_clk_n_i,
+--         iec_clk_n_o             => iec_clk_n_o,
+--         iec_data_en_o           => iec_data_en,
+--         iec_data_n_i            => iec_data_n_i,
+--         iec_data_n_o            => iec_data_n_o,
+--         iec_srq_en_o            => iec_srq_en,
+--         iec_srq_n_i             => iec_srq_n_i,
+--         iec_srq_n_o             => iec_srq_n_o,
 
-         -- C64 Expansion Port (aka Cartridge Port)
-         cart_en_o               => cart_en,      -- Enable port, active high
-         cart_phi2_o             => cart_phi2_o,
-         cart_dotclock_o         => cart_dotclock_o,
-         cart_dma_i              => cart_dma_i,
-         --
-         cart_reset_oe_o         => cart_reset_oe,
-         cart_reset_i            => cart_reset_in,
-         cart_reset_o            => cart_reset_out,
-         --
-         cart_game_oe_o          => cart_game_oe,
-         cart_game_i             => cart_game_in,
-         cart_game_o             => cart_game_out,
-         --
-         cart_exrom_oe_o         => cart_exrom_oe,
-         cart_exrom_i            => cart_exrom_in,
-         cart_exrom_o            => cart_exrom_out,
-         --
-         cart_nmi_oe_o           => cart_nmi_oe,
-         cart_nmi_i              => cart_nmi_in,
-         cart_nmi_o              => cart_nmi_out,
-         --
-         cart_irq_oe_o           => cart_irq_oe,
-         cart_irq_i              => cart_irq_in,
-         cart_irq_o              => cart_irq_out,
-         --
-         cart_roml_oe_o          => cart_roml_oe,
-         cart_roml_i             => cart_roml_in,
-         cart_roml_o             => cart_roml_out,
-         --
-         cart_romh_oe_o          => cart_romh_oe,
-         cart_romh_i             => cart_romh_in,
-         cart_romh_o             => cart_romh_out,
-         --
-         cart_ctrl_oe_o          => cart_ctrl_oe, -- 0 : tristate (i.e. input), 1 : output
-         cart_ba_i               => cart_ba_in,
-         cart_rw_i               => cart_rw_in,
-         cart_io1_i              => cart_io1_in,
-         cart_io2_i              => cart_io2_in,
-         cart_ba_o               => cart_ba_out,
-         cart_rw_o               => cart_rw_out,
-         cart_io1_o              => cart_io1_out,
-         cart_io2_o              => cart_io2_out,
-         --
-         cart_data_oe_o          => cart_data_oe, -- 0 : tristate (i.e. input), 1 : output
-         cart_d_i                => cart_d_in,
-         cart_d_o                => cart_d_out,
-         --
-         cart_addr_oe_o          => cart_addr_oe, -- 0 : tristate (i.e. input), 1 : output
-         cart_a_i                => cart_a_in,
-         cart_a_o                => cart_a_out
+--         -- C64 Expansion Port (aka Cartridge Port)
+--         cart_en_o               => cart_en,      -- Enable port, active high
+--         cart_phi2_o             => cart_phi2_o,
+--         cart_dotclock_o         => cart_dotclock_o,
+--         cart_dma_i              => cart_dma_i,
+--         --
+--         cart_reset_oe_o         => cart_reset_oe,
+--         cart_reset_i            => cart_reset_in,
+--         cart_reset_o            => cart_reset_out,
+--         --
+--         cart_game_oe_o          => cart_game_oe,
+--         cart_game_i             => cart_game_in,
+--         cart_game_o             => cart_game_out,
+--         --
+--         cart_exrom_oe_o         => cart_exrom_oe,
+--         cart_exrom_i            => cart_exrom_in,
+--         cart_exrom_o            => cart_exrom_out,
+--         --
+--         cart_nmi_oe_o           => cart_nmi_oe,
+--         cart_nmi_i              => cart_nmi_in,
+--         cart_nmi_o              => cart_nmi_out,
+--         --
+--         cart_irq_oe_o           => cart_irq_oe,
+--         cart_irq_i              => cart_irq_in,
+--         cart_irq_o              => cart_irq_out,
+--         --
+--         cart_roml_oe_o          => cart_roml_oe,
+--         cart_roml_i             => cart_roml_in,
+--         cart_roml_o             => cart_roml_out,
+--         --
+--         cart_romh_oe_o          => cart_romh_oe,
+--         cart_romh_i             => cart_romh_in,
+--         cart_romh_o             => cart_romh_out,
+--         --
+--         cart_ctrl_oe_o          => cart_ctrl_oe, -- 0 : tristate (i.e. input), 1 : output
+--         cart_ba_i               => cart_ba_in,
+--         cart_rw_i               => cart_rw_in,
+--         cart_io1_i              => cart_io1_in,
+--         cart_io2_i              => cart_io2_in,
+--         cart_ba_o               => cart_ba_out,
+--         cart_rw_o               => cart_rw_out,
+--         cart_io1_o              => cart_io1_out,
+--         cart_io2_o              => cart_io2_out,
+--         --
+--         cart_data_oe_o          => cart_data_oe, -- 0 : tristate (i.e. input), 1 : output
+--         cart_d_i                => cart_d_in,
+--         cart_d_o                => cart_d_out,
+--         --
+--         cart_addr_oe_o          => cart_addr_oe, -- 0 : tristate (i.e. input), 1 : output
+--         cart_a_i                => cart_a_in,
+--         cart_a_o                => cart_a_out
       ); -- CORE
 
 end architecture synthesis;

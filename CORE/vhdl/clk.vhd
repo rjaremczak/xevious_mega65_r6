@@ -24,7 +24,6 @@ use xpm.vcomponents.all;
 entity clk is
    port (
       sys_clk_i       : in  std_logic;   -- expects 100 MHz
-      sys_rstn_i      : in  std_logic;   -- Asynchronous, asserted low
 
       main_clk_o      : out std_logic;   -- Xevious's 18 MHz main clock
       main_rst_o      : out std_logic;   -- Xevious's reset, synchronized
@@ -134,7 +133,7 @@ begin
          DEST_SYNC_FF    => 10
       )
       port map (
-         src_arst  => not (main_locked and sys_rstn_i),   -- 1-bit input: Source reset signal.
+         src_arst  => not main_locked,   -- 1-bit input: Source reset signal.
          dest_clk  => main_clk_o,       -- 1-bit input: Destination clock.
          dest_arst => main_rst_o        -- 1-bit output: src_rst synchronized to the destination clock domain.
                                         -- This output is registered.
@@ -146,7 +145,7 @@ begin
          DEST_SYNC_FF    => 10
       )
       port map (
-         src_arst  => not (main_locked and sys_rstn_i),   -- 1-bit input: Source reset signal.
+         src_arst  => not main_locked,   -- 1-bit input: Source reset signal.
          dest_clk  => video_clk_o,       -- 1-bit input: Destination clock.
          dest_arst => video_rst_o        -- 1-bit output: src_rst synchronized to the destination clock domain.
                                          -- This output is registered.

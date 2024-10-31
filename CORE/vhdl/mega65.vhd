@@ -23,8 +23,7 @@ generic (
    G_BOARD : string                                         -- Which platform are we running on.
 );
 port (
-   CLK                     : in  std_logic;              -- 100 MHz clock
-   RESET_M2M_N             : in  std_logic;              -- Debounced system reset in system clock domain
+   clk_i                   : in  std_logic;              -- 100 MHz clock
 
    -- Share clock and reset with the framework
    main_clk_o              : out std_logic;              -- Xevious's 18 MHz main clock
@@ -43,7 +42,7 @@ port (
 
    -- Video and audio mode control
    qnice_dvi_o             : out std_logic;              -- 0=HDMI (with sound), 1=DVI (no sound)
-   qnice_video_mode_o      : out natural range 0 to 3;   -- HDMI 1280x720 @ 50 Hz resolution = mode 0, 1280x720 @ 60 Hz resolution = mode 1, PAL 576p in 4:3 and 5:4 are modes 2 and 3
+   qnice_video_mode_o      : out video_mode_type;      -- HDMI 1280x720 @ 50 Hz resolution = mode 0, 1280x720 @ 60 Hz resolution = mode 1, PAL 576p in 4:3 and 5:4 are modes 2 and 3
    qnice_scandoubler_o     : out std_logic;              -- 0 = no scandoubler, 1 = scandoubler
    qnice_audio_mute_o      : out std_logic;
    qnice_audio_filter_o    : out std_logic;
@@ -73,8 +72,6 @@ port (
    qnice_dev_we_i          : in  std_logic;
    qnice_dev_wait_o        : out std_logic;
    
-   
-
    --------------------------------------------------------------------------------------------------------
    -- Core Clock Domain
    --------------------------------------------------------------------------------------------------------
@@ -185,7 +182,7 @@ signal main_video_vblank   : std_logic;
 
 constant C_MENU_OSMPAUSE      : natural := 2;  
 constant C_MENU_OSMDIM        : natural := 3;
-constant C_FLIP_JOYS          : natural := 4;
+constant C_MENU_FLIPJOYS      : natural := 4;
 constant C_MENU_ROT90         : natural := 8;
 constant C_MENU_FLIP          : natural := 9;
 constant C_MENU_CRT_EMULATION : natural := 10;
@@ -314,8 +311,7 @@ begin
    -- MMCME2_ADV clock generators:
    clk_gen : entity work.clk
       port map (
-         sys_clk_i         => CLK,             -- expects 100 MHz
-         sys_rstn_i        => RESET_M2M_N,     -- Asynchronous, asserted low
+         sys_clk_i         => clk_i,             -- expects 100 MHz
          
          main_clk_o        => main_clk,        -- Xevious's 18 MHz main clock
          main_rst_o        => main_rst,        -- Xevious's reset, synchronized
@@ -596,32 +592,27 @@ begin
    -- Audio and video settings (QNICE clock domain)
    ---------------------------------------------------------------------------------------------
 
-   -- Due to a discussion on the MEGA65 discord (https://discord.com/channels/719326990221574164/794775503818588200/1039457688020586507)
-   -- we decided to choose a naming convention for the PAL modes that might be more intuitive for the end users than it is
-   -- for the programmers: "4:3" means "meant to be run on a 4:3 monitor", "5:4 on a 5:4 monitor".
-   -- The technical reality is though, that in our "5:4" mode we are actually doing a 4/3 aspect ratio adjustment
-   -- while in the 4:3 mode we are outputting a 5:4 image. This is kind of odd, but it seemed that our 4/3 aspect ratio
-   -- adjusted image looks best on a 5:4 monitor and the other way round.
-   -- Not sure if this will stay forever or if we will come up with a better naming convention.
-   qnice_video_mode_o <= 3 when qnice_osm_control_i(C_MENU_HDMI_5_4_50)  = '1' else
-                         2 when qnice_osm_control_i(C_MENU_HDMI_4_3_50)  = '1' else
-                         1 when qnice_osm_control_i(C_MENU_HDMI_16_9_60) = '1' else
-                         0;
-   -- qnice_retro15kHz_o: '1', if the output from the core (post-scandoubler) in the retro 15 kHz analog RGB mode.
-   --             Hint: Scandoubler off does not automatically mean retro 15 kHz on.
-   qnice_scandoubler_o        <= (not qnice_osm_control_i(C_MENU_VGA_15KHZHSVS)) and
-                                 (not qnice_osm_control_i(C_MENU_VGA_15KHZCS));   
-   qnice_retro15kHz_o <= '1';--qnice_osm_control_i(C_MENU_VGA_15KHZHSVS) or qnice_osm_control_i(C_MENU_VGA_15KHZCS);
-   qnice_csync_o      <= '1';--qnice_osm_control_i(C_MENU_VGA_15KHZCS);
-
-   -- Zoom out the OSM
-   qnice_osm_cfg_scaling_o    <= (others => '1');
+   qnice_video_mode_o <= C_VIDEO_HDMI_5_4_50   when qnice_osm_control_i(C_MENU_HDMI_5_4_50)    = '1' else
+                         C_VIDEO_HDMI_4_3_50   when qnice_osm_control_i(C_MENU_HDMI_4_3_50)    = '1' else
+                         C_VIDEO_HDMI_16_9_60  when qnice_osm_control_i(C_MENU_HDMI_16_9_60)   = '1' else
+                         C_VIDEO_HDMI_16_9_50;
 
    -- Use On-Screen-Menu selections to configure several audio and video settings
    -- Video and audio mode control
    qnice_dvi_o                <= '0';                                         -- 0=HDMI (with sound), 1=DVI (no sound)
-   qnice_audio_mute_o         <= '0';                                         -- audio is not muted
-   qnice_audio_filter_o       <= '1';                                         -- 0 = raw audio, 1 = use filters from globals.vhd
+   qnice_scandoubler_o        <= '0';                                         -- no scandoubler
+   qnice_audio_mute_o         <= '0';
+   qnice_audio_filter_o       <= '1';
+   
+   -- These two signals are often used as a pair (i.e. both '1'), particularly when
+   -- you want to run old analog cathode ray tube monitors or TVs (via SCART)
+   -- If you want to provide your users a choice, then a good choice is:
+   --    "Standard VGA":                     qnice_retro15kHz_o=0 and qnice_csync_o=0
+   --    "Retro 15 kHz with HSync and VSync" qnice_retro15kHz_o=1 and qnice_csync_o=0
+   --    "Retro 15 kHz with CSync"           qnice_retro15kHz_o=1 and qnice_csync_o=1
+   qnice_retro15kHz_o         <= '0';
+   qnice_csync_o              <= '0';
+   qnice_osm_cfg_scaling_o    <= (others => '1');
 
    -- ascal filters that are applied while processing the input
    -- 00 : Nearest Neighbour
@@ -639,7 +630,7 @@ begin
    qnice_ascal_triplebuf_o    <= '0';
 
    -- Flip joystick ports (i.e. the joystick in port 2 is used as joystick 1 and vice versa)
-   qnice_flip_joyports_o      <= qnice_osm_control_i(C_FLIP_JOYS);
+   qnice_flip_joyports_o      <= qnice_osm_control_i(C_MENU_FLIPJOYS);
 
    ---------------------------------------------------------------------------------------------
    -- Core specific device handling (QNICE clock domain)
