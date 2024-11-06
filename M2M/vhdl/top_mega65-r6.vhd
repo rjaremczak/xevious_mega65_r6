@@ -317,23 +317,11 @@ architecture synthesis of mega65_r6 is
    signal main_joy1_right_n_in   : std_logic;
    signal main_joy1_fire_n_in    : std_logic;
 
-   signal main_joy1_up_n_out     : std_logic;
-   signal main_joy1_down_n_out   : std_logic;
-   signal main_joy1_left_n_out   : std_logic;
-   signal main_joy1_right_n_out  : std_logic;
-   signal main_joy1_fire_n_out   : std_logic;
-
    signal main_joy2_up_n_in      : std_logic;
    signal main_joy2_down_n_in    : std_logic;
    signal main_joy2_left_n_in    : std_logic;
    signal main_joy2_right_n_in   : std_logic;
    signal main_joy2_fire_n_in    : std_logic;
-
-   signal main_joy2_up_n_out     : std_logic;
-   signal main_joy2_down_n_out   : std_logic;
-   signal main_joy2_left_n_out   : std_logic;
-   signal main_joy2_right_n_out  : std_logic;
-   signal main_joy2_fire_n_out   : std_logic;
 
    signal main_pot1_x            : std_logic_vector(7 downto 0);
    signal main_pot1_y            : std_logic_vector(7 downto 0);
@@ -669,21 +657,21 @@ begin
       main_joy1_left_n_o      => main_joy1_left_n_in,
       main_joy1_right_n_o     => main_joy1_right_n_in,
       main_joy1_fire_n_o      => main_joy1_fire_n_in,
-      main_joy1_up_n_i        => main_joy1_up_n_out,
-      main_joy1_down_n_i      => main_joy1_down_n_out,
-      main_joy1_left_n_i      => main_joy1_left_n_out,
-      main_joy1_right_n_i     => main_joy1_right_n_out,
-      main_joy1_fire_n_i      => main_joy1_fire_n_out,
+      main_joy1_up_n_i        => 'H',
+      main_joy1_down_n_i      => 'H',
+      main_joy1_left_n_i      => 'H',
+      main_joy1_right_n_i     => 'H',
+      main_joy1_fire_n_i      => 'H',
       main_joy2_up_n_o        => main_joy2_up_n_in,
       main_joy2_down_n_o      => main_joy2_down_n_in,
       main_joy2_left_n_o      => main_joy2_left_n_in,
       main_joy2_right_n_o     => main_joy2_right_n_in,
       main_joy2_fire_n_o      => main_joy2_fire_n_in,
-      main_joy2_up_n_i        => main_joy2_up_n_out,
-      main_joy2_down_n_i      => main_joy2_down_n_out,
-      main_joy2_left_n_i      => main_joy2_left_n_out,
-      main_joy2_right_n_i     => main_joy2_right_n_out,
-      main_joy2_fire_n_i      => main_joy2_fire_n_out,
+      main_joy2_up_n_i        => 'H',
+      main_joy2_down_n_i      => 'H',
+      main_joy2_left_n_i      => 'H',
+      main_joy2_right_n_i     => 'H',
+      main_joy2_fire_n_i      => 'H',
       main_pot1_x_o           => main_pot1_x,
       main_pot1_y_o           => main_pot1_y,
       main_pot2_x_o           => main_pot2_x,
@@ -853,22 +841,12 @@ begin
          main_joy_1_left_n_i     => main_joy1_left_n_in,
          main_joy_1_right_n_i    => main_joy1_right_n_in,
          main_joy_1_fire_n_i     => main_joy1_fire_n_in,
---         main_joy_1_up_n_o       => main_joy1_up_n_out,
---         main_joy_1_down_n_o     => main_joy1_down_n_out,
---         main_joy_1_left_n_o     => main_joy1_left_n_out,
---         main_joy_1_right_n_o    => main_joy1_right_n_out,
---         main_joy_1_fire_n_o     => main_joy1_fire_n_out,
-
+         
          main_joy_2_up_n_i       => main_joy2_up_n_in,
          main_joy_2_down_n_i     => main_joy2_down_n_in,
          main_joy_2_left_n_i     => main_joy2_left_n_in,
          main_joy_2_right_n_i    => main_joy2_right_n_in,
          main_joy_2_fire_n_i     => main_joy2_fire_n_in,
---         main_joy_2_up_n_o       => main_joy2_up_n_out,
---         main_joy_2_down_n_o     => main_joy2_down_n_out,
---         main_joy_2_left_n_o     => main_joy2_left_n_out,
---         main_joy_2_right_n_o    => main_joy2_right_n_out,
---         main_joy_2_fire_n_o     => main_joy2_fire_n_out,
 
          main_pot1_x_i           => main_pot1_x,
          main_pot1_y_i           => main_pot1_y,
