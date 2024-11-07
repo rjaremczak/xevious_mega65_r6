@@ -83,8 +83,8 @@ constant SCR_WELCOME : string :=
 
    -- We are not insisting. But it would be nice if you gave us credit for MiSTer2MEGA65 by leaving these lines in
    "Powered by MiSTer2MEGA65 Ver 1.0\n"   &
-   "By sy2002 and MJoergen in 2022\n"     &
-   "\n\n"                                 &
+   "By sy2002 and MJoergen in 2022\n\n"   &
+   "Ported to R6 by rjaremczak in 2024\n\n" &   
    "Credits  : Press '5' or '6'\n"        & 
    "Start    : Press '1' or '2'\n"        &
    "Pause    : Press 'p'\n"               &
