@@ -1,5 +1,5 @@
-GnG core for the MEGA65 R6
-==========================
+Xevious core for the MEGA65 R6
+==============================
 
 ![Screenshot](xevious_scr.jpg)
 
